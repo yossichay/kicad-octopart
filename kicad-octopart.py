@@ -4,7 +4,7 @@ import urllib
 
 url = "http://octopart.com/api/v3/parts/search"
 
-# NOTE: Use your API key here (https://octopart.com/api/register)
+# NOTE: Use your API key here (https://octopart.com/api/register) kjd
 url += "?apikey=70358d97"
 
 args = [
