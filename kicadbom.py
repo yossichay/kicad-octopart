@@ -4,8 +4,10 @@ import csv
 import shutil
 
 import wx
+import wx.grid as gridlib
 import sch, datastore
 import kicad_helpers as kch
+import kicad_octopart as octo
 
 
 class DBPartSelectorDialog(wx.Dialog):
@@ -146,6 +148,25 @@ class ComponentTypeView(wx.Panel):
         if not ct.has_valid_key_fields:
             raise Exception("Missing key fields (value / footprint)!")
 
+
+        ol = octo.octopart_lookup()
+        up = ol.parts_search(ct)
+        hits = ol.get_hits()
+        fields = ol.get_fields()
+
+        ss = SpreadSheet(hits, fields)
+        ss.Show()
+        ss.populate(up, fields)
+
+
+
+ #   def _populate_spreadsheet(self):
+
+        k = 0
+
+
+        '''
+
         up = self.parent.ds.lookup(ct)
 
         if up is None:
@@ -212,6 +233,8 @@ class ComponentTypeView(wx.Panel):
             mpn, spn = selections[_dbps.selection_text]
             _set_pn_values(mpn,spn)
 
+        '''
+
     def on_save_to_datastore(self, event):
 
         self.save_component_type_changes()
@@ -261,6 +284,61 @@ class ComponentTypeView(wx.Panel):
 
         map(self.fp_list.Append,
             [x for x in sorted(set(type_data.keys()))])
+
+class SpreadSheet(wx.Frame):
+    def __init__(self, parent, log):
+        """Constructor"""
+        wx.Frame.__init__(self, parent, -1, title="Parts Found")
+        self._gr = SpreadSheetGrid(self, log)
+
+class SpreadSheetGrid(gridlib.Grid)
+    def __init__(self, parent, log):
+        gridlib.Grid.__init__(self, parent, -1)
+
+        self._gr = gridlib.Grid(panel)
+        self._gr.CreateGrid(2, 8)
+        i = 0;
+        for label in fields:
+            self._gr.SetColLabelValue(i, label)
+            #self._gr.SetSortingColumn(i)
+            i += 1
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self._gr, 1, wx.EXPAND)
+        panel.SetSizer(sizer)
+
+
+        # Bind Events
+        self._gr.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
+
+    def OnGridColSort(self, evt):
+        # self.log.write("OnGridColSort: %s %s" % (evt.GetCol(), self.GetSortingColumn()))
+        self.SetSortingColumn(evt.GetCol())
+
+    def populate(self, up, fields):
+        k = 0
+        for part in up:
+            for col in range(len(fields)):
+                if isinstance(part[fields[col]], basestring):
+                    self._gr.SetCellValue(k, col, part[fields[col]])
+                else:
+                    self._gr.SetCellValue(k, col, str(part[fields[col]]))
+            self._gr.AppendRows(1)
+            k = k + 1
+        print k
+
+
+'''
+self._gr.SetCellValue(k, 0, part['Manufacturer'])
+self._gr.SetCellValue(k, 1, part['Manufacturer_PN'])
+self._gr.SetCellValue(k, 2, part['Description'])
+self._gr.SetCellValue(k, 3, part['Supplier'])
+self._gr.SetCellValue(k, 4, str(part['Supplier_PN']))
+self._gr.SetCellValue(k, 5, str(part['In_stock_qty']))
+self._gr.SetCellValue(k, 6, str(part['MOQ']))
+self._gr.SetCellValue(k, 7, '')
+'''
+
 
 class UniquePartSelectorDialog(wx.Dialog):
     def __init__(self, parent, id, title):
