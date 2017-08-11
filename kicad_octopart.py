@@ -2,7 +2,9 @@
 import json
 import urllib
 
+
 class octopart_lookup(object):
+
 
     _field_map = [
         'Manufacturer',
@@ -12,9 +14,14 @@ class octopart_lookup(object):
         'Supplier PN',
         'Qty In Stock',
         'MOQ',
-        'Prices'
+        'Prices',
+        'Datasheet'
         ]
-
+    '''
+    _search_vendors [
+        ''
+    ]
+    '''
     def __init__(self):
         self._api_key = "?apikey=70358d97"
 
@@ -54,22 +61,32 @@ class octopart_lookup(object):
         item={}
         for result in search_response['results']:
             part = result['item']
+            for ds in part['datasheets']:
+                att = ds['attribution']
+                for src in att['sources']:
+                    if not ds['metadata'] == None:
+                        print "%s\t%s\t%s\t%s" % (ds['metadata']['last_updated'], ds['metadata']['date_created'], src['name'], ds['url'])
             for offer in part['offers']:
-                desc_found = 0
+
+                # Find the description that originated from the seller
                 for description in part['descriptions']:
                     vendor_desc = description['attribution']['sources']
                     vendor = vendor_desc[0]['name']
                     d=''
                     if (vendor==offer['seller']['name']):
                         d=description['value']
-    #                   print "%s\t\t\t%s\t\t\t" % (part['brand']['name'], part['mpn']),
-    #                   print "%s\t\t%s\t\t" % (offer['seller']['name'], offer['sku']),
-    #                   print "%s" % description['value']
+                        d=d[:75]
                         break
-    #        item['MFG']=part['brand']['name']
-    #        item['MPN']=part['mpn']
-    #        item['SUP']=offer['seller']['name']
-    #        item['SPN']=offer['sku']
+
+                # Find the datasheet that originated from the seller
+                for datasheet in part['datasheets']:
+                    vendor_desc = datasheet['attribution']['sources']
+                    vendor = vendor_desc[0]['name']
+                    dsht=''
+                    if (vendor==offer['seller']['name']):
+                        dsht=datasheet['url']
+                        break
+
                 found.append({self._field_map[0]:part['brand']['name'],
                               self._field_map[1]:part['mpn'],
                               self._field_map[3]:offer['seller']['name'],
@@ -77,10 +94,9 @@ class octopart_lookup(object):
                               self._field_map[2]:d,
                               self._field_map[5]:offer['in_stock_quantity'],
                               self._field_map[6]:offer['moq'],
-                              self._field_map[7]:offer['prices']
+                              self._field_map[7]:offer['prices'],
+                              self._field_map[8]:dsht
                             })
-    #            print "%s\t\t\t%s\t\t\t" % (part['brand']['name'], part['mpn']),
-    #            print "%s\t\t%s\t\t" % (offer['seller']['name'], offer['sku'])
 
         return found
 

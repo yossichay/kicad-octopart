@@ -5,10 +5,11 @@ import shutil
 
 import wx
 import wx.grid as gridlib
+from wx.lib import sheet
 import sch, datastore
 import kicad_helpers as kch
 import kicad_octopart as octo
-
+from operator import itemgetter
 
 class DBPartSelectorDialog(wx.Dialog):
     def __init__(self, parent, id, title):
@@ -123,8 +124,8 @@ class ComponentTypeView(wx.Panel):
             (self.spr_text, 0, wx.EXPAND),
             (wx.StaticText(self, -1, 'Supplier PN'), 0, wx.EXPAND),
             (self.spn_text, 0, wx.EXPAND),
-            (self.lookup_button, 0, wx.EXPAND),
-            (self.save_button, 0, wx.EXPAND),
+            (self.lookup_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.save_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
         ])
 
     def save_component_type_changes(self):
@@ -139,101 +140,8 @@ class ComponentTypeView(wx.Panel):
         self._current_type.supplier = self.spr_text.GetValue()
         self._current_type.supplier_pn = self.spn_text.GetValue()
 
-    def on_lookup_component(self, event):
-        ct = self._current_type
-
-        if not ct:
-            return
-
-        if not ct.has_valid_key_fields:
-            raise Exception("Missing key fields (value / footprint)!")
 
 
-        ol = octo.octopart_lookup()
-        up = ol.parts_search(ct)
-        hits = ol.get_hits()
-        fields = ol.get_fields()
-
-        ss = SpreadSheet(hits, fields)
-        ss.Show()
-        ss.populate(up, fields)
-
-
-
- #   def _populate_spreadsheet(self):
-
-        k = 0
-
-
-        '''
-
-        up = self.parent.ds.lookup(ct)
-
-        if up is None:
-            dlg = wx.MessageDialog(self.parent,
-                                   "Component does not exist in Datastore",
-                                   "No Results Found",
-                                   wx.OK | wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-
-        if not up.manufacturer_pns.count():
-            dlg = wx.MessageDialog(parent,
-                                   "No suitable parts found in Datastore",
-                                   "No Results Found",
-                                   wx.OK | wx.ICON_INFORMATION)
-            return
-
-        selections = {}
-
-
-        for pn in up.manufacturer_pns:
-            print pn
-            if not pn.supplier_parts:
-                print "no known suppliers"
-                sel_txt = '{} (No Known Suppliers)'.format(
-                    pn.pn
-                )
-                selections[sel_txt] = (pn, None)
-
-            else:
-                for s_pn in pn.supplier_parts:
-                    print "suppliers:", s_pn.supplier.name
-                    sel_text = '{} {} @ {}[{}]'.format(
-                        pn.manufacturer.name,
-                        pn.pn,
-                        s_pn.supplier.name,
-                        s_pn.pn
-                    )
-                    selections[sel_text] = (pn, s_pn)
-
-        def _set_pn_values(mpn,spn):
-            if mpn:
-                self.mfr_text.SetValue(mpn.manufacturer.name)
-                self.mpn_text.SetValue(mpn.pn)
-            if spn:
-                self.spr_text.SetValue(spn.supplier.name)
-                self.spn_text.SetValue(spn.pn)
-
-
-        if len(selections) == 1:
-            mpn, spn = selections.values().pop()
-            _set_pn_values(mpn,spn)
-        else:
-            _dbps = DBPartSelectorDialog(self,
-                                         wx.ID_ANY,
-                                         'DB Part Selection')
-            _dbps.attach_data(selections.keys())
-            _dbps.ShowModal()
-
-            if not _dbps.selection_text:
-                return
-
-            mpn, spn = selections[_dbps.selection_text]
-            _set_pn_values(mpn,spn)
-
-        '''
 
     def on_save_to_datastore(self, event):
 
@@ -285,59 +193,186 @@ class ComponentTypeView(wx.Panel):
         map(self.fp_list.Append,
             [x for x in sorted(set(type_data.keys()))])
 
-class SpreadSheet(wx.Frame):
-    def __init__(self, parent, log):
+    def on_lookup_component(self, event):
+        ct = self._current_type
+
+        if not ct:
+            return
+
+        if not ct.has_valid_key_fields:
+            raise Exception("Missing key fields (value / footprint)!")
+
+        ol = octo.octopart_lookup()
+        up = ol.parts_search(ct)
+        hits = ol.get_hits()
+        if hits < 1:
+            dlg = wx.MessageDialog(self.parent,
+                                   "Component does not exist in Octopart",
+                                   "No Results Found",
+                                   wx.OK | wx.ICON_INFORMATION)
+        # self.fields = list(up[0].keys())
+        self.fields = ol.get_fields()
+
+        ss = SpreadSheet(None, self.fields, up)
+        ss.Show(True)
+        ss.gr.populate(up)
+
+        # fl = FiltersDialog(None, up)
+
+'''        
+class FilterDialog(wx.Frame):
+    def __init__(self, parent, up):
         """Constructor"""
-        wx.Frame.__init__(self, parent, -1, title="Parts Found")
-        self._gr = SpreadSheetGrid(self, log)
+        wx.Frame.__init__(self, parent, -1, title="Filter")
+        self.gr = SpreadSheetGrid(self, fields)
+'''
 
-class SpreadSheetGrid(gridlib.Grid)
-    def __init__(self, parent, log):
-        gridlib.Grid.__init__(self, parent, -1)
+class SelectionSheet(sheet.CSheet):
+    def __init__(self, parent):
+        sheet.CSheet.__init__(self, parent)
+        self.row = self.col = 0
+        self.SetNumberRows(55)
+        self.SetNumberCols(25)
 
-        self._gr = gridlib.Grid(panel)
-        self._gr.CreateGrid(2, 8)
+        for i in range(55):
+            self.SetRowSize(i, 20)
+    '''
+    def OnGridSelectCell(self, event):
+        self.row, self.col = event.GetRow(), event.GetCol()
+        control = self.GetParent().GetParent().position
+        value =  self.GetColLabelValue(self.col) + self.GetRowLabelValue(self.row)
+        control.SetValue(value)
+        event.Skip()
+    '''
+
+
+class SpreadSheet(wx.Frame):
+    def __init__(self, parent, fields, up):
+        """Constructor"""
+        wx.Frame.__init__(self, parent, -1, title="Parts Found", size = (550, 500))
+        # self._fields = fields
+        # self._up = {}
+
+        box = wx.BoxSizer(wx.VERTICAL)
+        menuBar = wx.MenuBar()
+
+        menu1 = wx.Menu()
+        menuBar.Append(menu1, '&File')
+        menu2 = wx.Menu()
+        menuBar.Append(menu2, '&Edit')
+        menu3 = wx.Menu()
+        menuBar.Append(menu3, '&Edit')
+        menu4 = wx.Menu()
+        menuBar.Append(menu4, '&Insert')
+        menu5 = wx.Menu()
+        menuBar.Append(menu5, 'F&ormat')
+        menu6 = wx.Menu()
+        menuBar.Append(menu6, '&Tools')
+        menu7 = wx.Menu()
+        menuBar.Append(menu7, '&Data')
+        menu8 = wx.Menu()
+        menuBar.Append(menu8, '&Help')
+
+        self.SetMenuBar(menuBar)
+
+        self.SetSizer(box)
+        notebook = wx.Notebook(self, -1, style=wx.RIGHT | wx.NB_LEFT)
+
+        sheets = []
+        vendors = []
+        for part in up:
+            if part['Supplier'] not in vendors:
+                vendors.append(part['Supplier'])
+                print part['Supplier']
+                sheets.append(SelectionSheet(notebook))
+
+        # sheet1 = SelectionSheet(notebook)
+        # sheet2 = SelectionSheet(notebook)
+        # sheet3 = SelectionSheet(notebook)
+        # sheet1.SetFocus()
+
+        v = 0
+        for sheet in sheets:
+            i = 0
+            for label in fields:
+                sheet.SetColLabelValue(i, label)
+                i += 1
+            notebook.AddPage(sheet, vendors[v])
+            v += 1
+
+
+        box.Add(notebook, 1, wx.EXPAND)
+
+        self.CreateStatusBar()
+        self.Centre()
+        self.Show(True)
+
+
+        '''
+        ss_grid = wx.BoxSizer(wx.VERTICAL)
+        gl = gridlib.Grid.__init__(self, parent, -1)
+        gl.CreateGrid(2, 8)
+        gl.EnableEditing(False)
+        gl.EnableCellEditControl(False)
         i = 0;
-        for label in fields:
-            self._gr.SetColLabelValue(i, label)
-            #self._gr.SetSortingColumn(i)
+        for label in self._fields:
+            gl.SetColLabelValue(i, label)
             i += 1
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self._gr, 1, wx.EXPAND)
-        panel.SetSizer(sizer)
-
-
         # Bind Events
-        self._gr.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
+        self.gl.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
+
+        ss_grid.Add(gl, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND)
+        '''
 
     def OnGridColSort(self, evt):
         # self.log.write("OnGridColSort: %s %s" % (evt.GetCol(), self.GetSortingColumn()))
         self.SetSortingColumn(evt.GetCol())
+        self._up = sorted(self._up, key=itemgetter(self._fields[evt.GetCol()]), reverse=False)
+        self.populate(self._up)
 
-    def populate(self, up, fields):
+    def populate(self, up):
         k = 0
+        self._up=up
         for part in up:
-            for col in range(len(fields)):
-                if isinstance(part[fields[col]], basestring):
-                    self._gr.SetCellValue(k, col, part[fields[col]])
+            for col in range(len(self._fields)):
+                if isinstance(part[self._fields[col]], basestring):
+                    self.SetCellValue(k, col, part[self._fields[col]])
                 else:
-                    self._gr.SetCellValue(k, col, str(part[fields[col]]))
-            self._gr.AppendRows(1)
+                    self.SetCellValue(k, col, str(part[self._fields[col]]))
+            self.AppendRows(1)
             k = k + 1
-        print k
+        self.AutoSizeColumns()
+
+'''
+
+class SpreadSheet(wx.Frame):
+    def __init__(self, parent, fields):
+        """Constructor"""
+        wx.Frame.__init__(self, parent, -1, title="Parts Found")
+        self.gr = SpreadSheetGrid(self, fields)
+
+class SpreadSheetGrid(gridlib.Grid):
+    def __init__(self, parent, fields):
+        gridlib.Grid.__init__(self, parent, -1)
+        self._fields = fields
+        self._up = {}
+
+        # self.gr = gridlib.Grid(panel)
+        self.CreateGrid(2, 8)
+        self.EnableEditing(False)
+        self.EnableCellEditControl(False)
+        i = 0;
+        for label in self._fields:
+            self.SetColLabelValue(i, label)
+            i += 1
+
+        # Bind Events
+        self.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
 
 
 '''
-self._gr.SetCellValue(k, 0, part['Manufacturer'])
-self._gr.SetCellValue(k, 1, part['Manufacturer_PN'])
-self._gr.SetCellValue(k, 2, part['Description'])
-self._gr.SetCellValue(k, 3, part['Supplier'])
-self._gr.SetCellValue(k, 4, str(part['Supplier_PN']))
-self._gr.SetCellValue(k, 5, str(part['In_stock_qty']))
-self._gr.SetCellValue(k, 6, str(part['MOQ']))
-self._gr.SetCellValue(k, 7, '')
-'''
+
 
 
 class UniquePartSelectorDialog(wx.Dialog):
