@@ -213,9 +213,8 @@ class ComponentTypeView(wx.Panel):
         # self.fields = list(up[0].keys())
         self.fields = ol.get_fields()
 
-        ss = SpreadSheet(None, self.fields, up)
+        ss = SpreadSheet(self,  up)
         ss.Show(True)
-        ss.gr.populate(up)
 
         # fl = FiltersDialog(None, up)
 
@@ -245,14 +244,37 @@ class SelectionSheet(sheet.CSheet):
         event.Skip()
     '''
 
+TBFLAGS = ( wx.TB_HORIZONTAL
+            | wx.NO_BORDER
+            | wx.TB_FLAT
+            #| wx.TB_TEXT
+            #| wx.TB_HORZ_LAYOUT
+            )
+
 
 class SpreadSheet(wx.Frame):
-    def __init__(self, parent, fields, up):
+    def __init__(self, parent, up):
         """Constructor"""
         wx.Frame.__init__(self, parent, -1, title="Parts Found", size = (550, 500))
-        # self._fields = fields
-        # self._up = {}
+        self._fields = up[0].keys()
+        self._up = up
 
+        vendors = self.GetVendorList()
+        manufacturers = self.GetManufacturerList()
+
+        toolbar = self.CreateToolBar(TBFLAGS)
+        self.CreateStatusBar()
+
+        cbID = wx.NewId()
+
+        vnd = wx.ComboBox(toolbar, cbID, choices=vendors, size=(100, -1), style=wx.CB_DROPDOWN)
+        mfgs = wx.ComboBox(toolbar, cbID, choices=manufacturers, size=(100, -1), style=wx.CB_DROPDOWN)
+        toolbar.AddControl(vnd)
+        toolbar.AddControl(mfgs)
+
+        toolbar.Realize()
+
+        '''
         box = wx.BoxSizer(wx.VERTICAL)
         menuBar = wx.MenuBar()
 
@@ -274,38 +296,33 @@ class SpreadSheet(wx.Frame):
         menuBar.Append(menu8, '&Help')
 
         self.SetMenuBar(menuBar)
+        '''
 
-        self.SetSizer(box)
-        notebook = wx.Notebook(self, -1, style=wx.RIGHT | wx.NB_LEFT)
+        self._sheet = wx.lib.sheet.CSheet(self)
+        #sheet = SelectionSheet(self)
+        self._sheet.row = self._sheet.col = 0
+        self._sheet.SetNumberRows(55)
+        self._sheet.SetNumberCols(25)
 
-        sheets = []
-        vendors = []
-        for part in up:
-            if part['Supplier'] not in vendors:
-                vendors.append(part['Supplier'])
-                print part['Supplier']
-                sheets.append(SelectionSheet(notebook))
+        for i in range(55):
+            self._sheet.SetRowSize(i, 20)
 
-        # sheet1 = SelectionSheet(notebook)
-        # sheet2 = SelectionSheet(notebook)
-        # sheet3 = SelectionSheet(notebook)
-        # sheet1.SetFocus()
+        i = 0
+        for label in self._fields:
+            self._sheet.SetColLabelValue(i, label)
+            i += 1
+        self.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
+        self.populate()
 
-        v = 0
-        for sheet in sheets:
-            i = 0
-            for label in fields:
-                sheet.SetColLabelValue(i, label)
-                i += 1
-            notebook.AddPage(sheet, vendors[v])
-            v += 1
+        #box.Add(sheet, 1, wx.EXPAND)
+        #box.RecalcSizes()
+        #self.CreateStatusBar()
+        '''
+        client.SetSizer(box)
 
-
-        box.Add(notebook, 1, wx.EXPAND)
-
-        self.CreateStatusBar()
-        self.Centre()
-        self.Show(True)
+        #self.Centre()
+        #self.Show(True)
+        '''
 
 
         '''
@@ -324,25 +341,57 @@ class SpreadSheet(wx.Frame):
 
         ss_grid.Add(gl, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND)
         '''
+    def GetVendorList(self):
+        vendors = []
+        for part in self._up:
+            if part['Supplier'] not in vendors:
+                vendors.append(part['Supplier'])
+        return vendors
+
+    def GetManufacturerList(self):
+        manufacturers = []
+        for part in self._up:
+            if part['Manufacturer'] not in manufacturers:
+                manufacturers.append(part['Manufacturer'])
+        return manufacturers
+
 
     def OnGridColSort(self, evt):
         # self.log.write("OnGridColSort: %s %s" % (evt.GetCol(), self.GetSortingColumn()))
-        self.SetSortingColumn(evt.GetCol())
+        #self.SetSortingColumn(evt.GetCol())
         self._up = sorted(self._up, key=itemgetter(self._fields[evt.GetCol()]), reverse=False)
-        self.populate(self._up)
+        self.populate()
 
-    def populate(self, up):
+    def populate(self):
         k = 0
-        self._up=up
-        for part in up:
+
+        #self._up=up
+        ds_column = self._fields.index("Datasheet")
+        mpn_column = self._fields.index("Manufacturer PN")
+        default_font = self._sheet.GetCellFont(0,0)
+        hyperlink_font = default_font
+        hyperlink_font.MakeItalic()
+        hyperlink_font.MakeUnderlined()
+        hl_color = wx.Colour(0,0,255)
+
+        for part in self._up:
             for col in range(len(self._fields)):
-                if isinstance(part[self._fields[col]], basestring):
-                    self.SetCellValue(k, col, part[self._fields[col]])
+                v = part[self._fields[col]]
+                if isinstance(v, basestring):
+                    self._sheet.SetCellValue(k, col, v)
                 else:
-                    self.SetCellValue(k, col, str(part[self._fields[col]]))
-            self.AppendRows(1)
+                    self._sheet.SetCellValue(k, col, str(v))
+            if (part['Datasheet'] != ''):
+                self._sheet.SetCellFont(k, mpn_column, hyperlink_font)
+                self._sheet.SetCellTextColour(k, mpn_column, hl_color)
+
+            self._sheet.AppendRows(1)
             k = k + 1
-        self.AutoSizeColumns()
+
+        self._sheet.AutoSizeColumns()
+
+            #self._sheet.HideCol(ds_column)
+
 
 '''
 

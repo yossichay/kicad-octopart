@@ -1,124 +1,125 @@
-from wx.lib import sheet
-import wx
+import  sys
+
+import  wx
+
+import  ColorPanel
+import  GridSimple
+import  ListCtrl
+import  ScrolledWindow
+import  images
+
+#----------------------------------------------------------------------------
+
+class TestNB(wx.Notebook):
+    def __init__(self, parent, id, log):
+        wx.Notebook.__init__(self, parent, id, size=(21,21), style=
+                             wx.BK_DEFAULT
+                             #wx.BK_TOP
+                             #wx.BK_BOTTOM
+                             #wx.BK_LEFT
+                             #wx.BK_RIGHT
+                             # | wx.NB_MULTILINE
+                             )
+        self.log = log
+
+        win = self.makeColorPanel(wx.BLUE)
+        self.AddPage(win, "Blue")
+        st = wx.StaticText(win.win, -1,
+                          "You can put nearly any type of window here,\n"
+                          "and if the platform supports it then the\n"
+                          "tabs can be on any side of the notebook.",
+                          (10, 10))
+
+        st.SetForegroundColour(wx.WHITE)
+        st.SetBackgroundColour(wx.BLUE)
+
+        # Show how to put an image on one of the notebook tabs,
+        # first make the image list:
+        il = wx.ImageList(16, 16)
+        idx1 = il.Add(images.Smiles.GetBitmap())
+        self.AssignImageList(il)
+
+        # now put an image on the first tab we just created:
+        self.SetPageImage(0, idx1)
 
 
-class MySheet(sheet.CSheet):
-    def __init__(self, parent):
-        sheet.CSheet.__init__(self, parent)
-        self.row = self.col = 0
-        self.SetNumberRows(55)
-        self.SetNumberCols(25)
+        win = self.makeColorPanel(wx.RED)
+        self.AddPage(win, "Red")
 
-        for i in range(55):
-            self.SetRowSize(i, 20)
+        win = ScrolledWindow.MyCanvas(self)
+        self.AddPage(win, 'ScrolledWindow')
 
-    def OnGridSelectCell(self, event):
-        self.row, self.col = event.GetRow(), event.GetCol()
-        control = self.GetParent().GetParent().position
-        value =  self.GetColLabelValue(self.col) + self.GetRowLabelValue(self.row)
-        control.SetValue(value)
+        win = self.makeColorPanel(wx.GREEN)
+        self.AddPage(win, "Green")
+
+        win = GridSimple.SimpleGrid(self, log)
+        self.AddPage(win, "Grid")
+
+        win = ListCtrl.TestListCtrlPanel(self, log)
+        self.AddPage(win, 'List')
+
+        win = self.makeColorPanel(wx.CYAN)
+        self.AddPage(win, "Cyan")
+
+        win = self.makeColorPanel(wx.NamedColour('Midnight Blue'))
+        self.AddPage(win, "Midnight Blue")
+
+        win = self.makeColorPanel(wx.NamedColour('Indian Red'))
+        self.AddPage(win, "Indian Red")
+
+        self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
+        self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
+
+
+    def makeColorPanel(self, color):
+        p = wx.Panel(self, -1)
+        win = ColorPanel.ColoredPanel(p, color)
+        p.win = win
+        def OnCPSize(evt, win=win):
+            win.SetPosition((0,0))
+            win.SetSize(evt.GetSize())
+        p.Bind(wx.EVT_SIZE, OnCPSize)
+        return p
+
+
+    def OnPageChanged(self, event):
+        old = event.GetOldSelection()
+        new = event.GetSelection()
+        sel = self.GetSelection()
+        self.log.write('OnPageChanged,  old:%d, new:%d, sel:%d\n' % (old, new, sel))
         event.Skip()
 
+    def OnPageChanging(self, event):
+        old = event.GetOldSelection()
+        new = event.GetSelection()
+        sel = self.GetSelection()
+        self.log.write('OnPageChanging, old:%d, new:%d, sel:%d\n' % (old, new, sel))
+        event.Skip()
 
-class Newt(wx.Frame):
-    def __init__(self, parent, id, title):
-        wx.Frame.__init__(self, parent, -1, title, size = (550, 500))
+#----------------------------------------------------------------------------
 
-        fonts = ['Times New Roman', 'Times', 'Courier', 'Courier New', 'Helvetica',
-                'Sans', 'verdana', 'utkal', 'aakar', 'Arial']
-        font_sizes = ['10', '11', '12', '14', '16']
+def runTest(frame, nb, log):
+    testWin = TestNB(nb, -1, log)
+    return testWin
 
-        box = wx.BoxSizer(wx.VERTICAL)
-        menuBar = wx.MenuBar()
+#----------------------------------------------------------------------------
 
-        menu1 = wx.Menu()
-        menuBar.Append(menu1, '&File')
-        menu2 = wx.Menu()
-        menuBar.Append(menu2, '&Edit')
-        menu3 = wx.Menu()
-        menuBar.Append(menu3, '&Edit')
-        menu4 = wx.Menu()
-        menuBar.Append(menu4, '&Insert')
-        menu5 = wx.Menu()
-        menuBar.Append(menu5, 'F&ormat')
-        menu6 = wx.Menu()
-        menuBar.Append(menu6, '&Tools')
-        menu7 = wx.Menu()
-        menuBar.Append(menu7, '&Data')
-        menu8 = wx.Menu()
-        menuBar.Append(menu8, '&Help')
 
-        self.SetMenuBar(menuBar)
-        '''
-        toolbar1 = wx.ToolBar(self, -1, style= wx.TB_HORIZONTAL)
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_new.png'))
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_open.png'))
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_save.png'))
-        toolbar1.AddSeparator()
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_cut.png'))
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_copy.png'))
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_paste.png'))
-        toolbar1.AddLabelTool(-1, '',  wx.Bitmap('icons/stock_delete.png'))
-        toolbar1.AddSeparator()
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_undo.png'))
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/stock_redo.png'))
-        toolbar1.AddSeparator()
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/incr22.png'))
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/decr22.png'))
-        toolbar1.AddSeparator()
-        toolbar1.AddLabelTool(-1, '', wx.Bitmap('icons/chart.xpm'))
-        toolbar1.AddSeparator()
-        toolbar1.AddLabelTool(-1, '',  wx.Bitmap('icons/stock_exit.png'))
+overview = """\
+<html><body>
+<h2>wx.Notebook</h2>
+<p>
+This class represents a notebook control, which manages multiple
+windows with associated tabs.
+<p>
+To use the class, create a wx.Notebook object and call AddPage or
+InsertPage, passing a window to be used as the page. Do not explicitly
+delete the window for a page that is currently managed by wx.Notebook.
+"""
 
-        toolbar1.Realize()
-        '''
-        toolbar2 = wx.ToolBar(self, wx.TB_HORIZONTAL | wx.TB_TEXT)
 
-        self.position = wx.TextCtrl(toolbar2)
-        font = wx.ComboBox(toolbar2, -1, value = 'Times', choices=fonts, size=(100, -1),
-                style=wx.CB_DROPDOWN)
-        font_height = wx.ComboBox(toolbar2, -1, value = '10',  choices=font_sizes,
-                size=(50, -1), style=wx.CB_DROPDOWN)
+if __name__ == '__main__':
+    import sys,os
+    import run
+    run.main(['', os.path.basename(sys.argv[0])] + sys.argv[1:])
 
-        toolbar2.AddControl(self.position)
-        toolbar2.AddControl(font)
-        toolbar2.AddControl(font_height)
-        toolbar2.AddSeparator()
-        #bold = wx.Bitmap('icons/stock_text_bold.png')
-        #toolbar2.AddCheckTool(-1, bold)
-        #italic = wx.Bitmap('icons/stock_text_italic.png')
-        #toolbar2.AddCheckTool(-1, italic)
-        #under = wx.Bitmap('icons/stock_text_underline.png')
-        #toolbar2.AddCheckTool(-1, under)
-        #toolbar2.AddSeparator()
-        #toolbar2.AddLabelTool(-1, '', wx.Bitmap('icons/text_align_left.png'))
-        #toolbar2.AddLabelTool(-1, '', wx.Bitmap('icons/text_align_center.png'))
-        #toolbar2.AddLabelTool(-1, '', wx.Bitmap('icons/text_align_right.png'))
-
-        #box.Add(toolbar1, border=5)
-        box.Add((5,5) , 0)
-        box.Add(toolbar2)
-        box.Add((5,10) , 0)
-
-        toolbar2.Realize()
-        self.SetSizer(box)
-        notebook = wx.Notebook(self, -1, style=wx.RIGHT)
-
-        sheet1 = MySheet(notebook)
-        sheet2 = MySheet(notebook)
-        sheet3 = MySheet(notebook)
-        sheet1.SetFocus()
-
-        notebook.AddPage(sheet1, 'Sheet1')
-        notebook.AddPage(sheet2, 'Sheet2')
-        notebook.AddPage(sheet3, 'Sheet3')
-
-        box.Add(notebook, 1, wx.EXPAND)
-
-        self.CreateStatusBar()
-        self.Centre()
-        self.Show(True)
-
-#app = wx.App()
-#Newt(None, -1, 'SpreadSheet')
-#app.MainLoop()
