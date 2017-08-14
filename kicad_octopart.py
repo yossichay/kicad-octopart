@@ -2,6 +2,7 @@
 import json
 import urllib
 from collections import OrderedDict
+import wx
 
 class octopart_lookup(object):
 
@@ -71,10 +72,10 @@ class octopart_lookup(object):
                 qty = price_break[0]
         return pr
 
-    def parts_search(self, ct):
+    def parts_search(self, pn):
 
         self._args = [
-            ('q', '{}'.format(ct.value)),
+            ('q', '{}'.format(pn)),
             ('start', 0),
             ('limit', 100),
             ('pretty_print','true'),
@@ -87,8 +88,11 @@ class octopart_lookup(object):
         search_response = json.loads(data)
 
         self._hits = search_response['hits']
-
         found=[]
+        if self._hits < 1:
+            return found
+
+
         item={}
         for result in search_response['results']:
             part = result['item']
@@ -112,13 +116,13 @@ class octopart_lookup(object):
                         break
 
                 # Find the datasheet that originated from the seller
+                dsht = ''
                 for datasheet in part['datasheets']:
                     vendor_desc = datasheet['attribution']['sources']
                     try:
                         vendor = vendor_desc[0]['name']
                     except:
                         continue
-                    dsht=''
                     if (vendor==offer['seller']['name']):
                         dsht=datasheet['url']
                         break

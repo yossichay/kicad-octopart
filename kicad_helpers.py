@@ -76,7 +76,7 @@ class ComponentWrapper(object):
 
             f_data = {
                 'name': '"{}"'.format(f),
-                'ref': '""'
+                'ref': '"~"'
             }
 
             self._cmp.addField(f_data)
@@ -168,6 +168,14 @@ class ComponentWrapper(object):
     @supplier_pn.setter
     def supplier_pn(self, pn):
         self._set_field_value('SPN', pn)
+
+    @property
+    def description(self):
+        return self._get_field_value('Description')
+
+    @description.setter
+    def description(self, desc):
+        self._set_field_value('Description', desc)
 
     @property
     def supplier_url(self):
@@ -293,6 +301,15 @@ class ComponentTypeContainer(object):
     def supplier_pn(self, pn):
         for c in self._components:
             c.supplier_pn = pn
+
+    @property
+    def description(self):
+        return self._components[0].description
+
+    @description.setter
+    def description(self, desc):
+        for c in self._components:
+            c.description = desc
 
     @property
     def supplier_url(self):
