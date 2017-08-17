@@ -1,125 +1,89 @@
-import  sys
+import json
+import urllib
+from filter_dlg import FilterDialog
 
-import  wx
+url = "http://octopart.com/api/v3/parts/search"
+url += "?apikey=70358d97"
 
-import  ColorPanel
-import  GridSimple
-import  ListCtrl
-import  ScrolledWindow
-import  images
+generic_fileds = ['case_package', '']
 
-#----------------------------------------------------------------------------
+specs_fields = {
+    'R' : [''],
+    'C' : [
+        'Capacitance',
+        'capacitance_tolerance',
+        'dielectric_characteristic',
+        'dielectric_material',
+        'lifecycle_status',
+        'mounting_style',
+        'packaging',
+        'rohs_status',
 
-class TestNB(wx.Notebook):
-    def __init__(self, parent, id, log):
-        wx.Notebook.__init__(self, parent, id, size=(21,21), style=
-                             wx.BK_DEFAULT
-                             #wx.BK_TOP
-                             #wx.BK_BOTTOM
-                             #wx.BK_LEFT
-                             #wx.BK_RIGHT
-                             # | wx.NB_MULTILINE
-                             )
-        self.log = log
+    ]
+}
 
-        win = self.makeColorPanel(wx.BLUE)
-        self.AddPage(win, "Blue")
-        st = wx.StaticText(win.win, -1,
-                          "You can put nearly any type of window here,\n"
-                          "and if the platform supports it then the\n"
-                          "tabs can be on any side of the notebook.",
-                          (10, 10))
+args = [
+    ('q', 'RES 10K'),
+    ('start', 0),
+    ('limit', 10),
+    ('pretty_print','true'),
+    ('include[]', 'specs'),
+    #('include[]', 'datasheets'),
+    ('spec_drilldown[include]', 'true'),
+]
 
-        st.SetForegroundColour(wx.WHITE)
-        st.SetBackgroundColour(wx.BLUE)
+url += '&' + urllib.urlencode(args)
 
-        # Show how to put an image on one of the notebook tabs,
-        # first make the image list:
-        il = wx.ImageList(16, 16)
-        idx1 = il.Add(images.Smiles.GetBitmap())
-        self.AssignImageList(il)
+data = urllib.urlopen(url).read()
+search_response = json.loads(data)
 
-        # now put an image on the first tab we just created:
-        self.SetPageImage(0, idx1)
+# print number of hits
+num_results = search_response['hits']
+print 'Number of results: %d' % num_results
 
+num_results_threshold = num_results/100
 
-        win = self.makeColorPanel(wx.RED)
-        self.AddPage(win, "Red")
+facets = []
+stats = []
 
-        win = ScrolledWindow.MyCanvas(self)
-        self.AddPage(win, 'ScrolledWindow')
+metadata = search_response['spec_metadata']
 
-        win = self.makeColorPanel(wx.GREEN)
-        self.AddPage(win, "Green")
+for facet_result_field in search_response['facet_results']['fields'].iteritems():
+    if len(facet_result_field[1]['facets']) > 1:
+        fn = facet_result_field[0].split(".")[1]
+        if metadata[fn]['unit'] != None:
+            facet_result_field[1]['units_name'] = metadata[fn]['unit']['name']
+            facet_result_field[1]['units_symbol'] = metadata[fn]['unit']['symbol']
+        else:
+            facet_result_field[1]['units_name'] = ''
+            facet_result_field[1]['units_symbol'] = ''
+        facet_result_field[1]['facet_name'] = metadata[fn]['name']
+        facet_result_field[1]['datatype'] = metadata[fn]['datatype']
+        facets.append(facet_result_field)
 
-        win = GridSimple.SimpleGrid(self, log)
-        self.AddPage(win, "Grid")
+for stat_result in search_response['stats_results'].iteritems():
+    if stat_result[1]['count'] > num_results_threshold:
 
-        win = ListCtrl.TestListCtrlPanel(self, log)
-        self.AddPage(win, 'List')
+        fn = stat_result[0].split(".")[1]
+        if metadata[fn]['unit'] != None:
+            stat_result[1]['units_name'] = metadata[fn]['unit']['name']
+            stat_result[1]['units_symbol'] = metadata[fn]['unit']['symbol']
+        else:
+            stat_result[1]['units_name'] = ''
+            stat_result[1]['units_symbol'] = ''
+        stat_result[1]['stat_name'] = metadata[fn]['name']
+        stat_result[1]['datatype'] = metadata[fn]['datatype']
+        stats.append(stat_result)
 
-        win = self.makeColorPanel(wx.CYAN)
-        self.AddPage(win, "Cyan")
-
-        win = self.makeColorPanel(wx.NamedColour('Midnight Blue'))
-        self.AddPage(win, "Midnight Blue")
-
-        win = self.makeColorPanel(wx.NamedColour('Indian Red'))
-        self.AddPage(win, "Indian Red")
-
-        self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
-        self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
-
-
-    def makeColorPanel(self, color):
-        p = wx.Panel(self, -1)
-        win = ColorPanel.ColoredPanel(p, color)
-        p.win = win
-        def OnCPSize(evt, win=win):
-            win.SetPosition((0,0))
-            win.SetSize(evt.GetSize())
-        p.Bind(wx.EVT_SIZE, OnCPSize)
-        return p
+FilterDialog(None, -1, num_results, facets, stats)
 
 
-    def OnPageChanged(self, event):
-        old = event.GetOldSelection()
-        new = event.GetSelection()
-        sel = self.GetSelection()
-        self.log.write('OnPageChanged,  old:%d, new:%d, sel:%d\n' % (old, new, sel))
-        event.Skip()
-
-    def OnPageChanging(self, event):
-        old = event.GetOldSelection()
-        new = event.GetSelection()
-        sel = self.GetSelection()
-        self.log.write('OnPageChanging, old:%d, new:%d, sel:%d\n' % (old, new, sel))
-        event.Skip()
-
-#----------------------------------------------------------------------------
-
-def runTest(frame, nb, log):
-    testWin = TestNB(nb, -1, log)
-    return testWin
-
-#----------------------------------------------------------------------------
 
 
-overview = """\
-<html><body>
-<h2>wx.Notebook</h2>
-<p>
-This class represents a notebook control, which manages multiple
-windows with associated tabs.
-<p>
-To use the class, create a wx.Notebook object and call AddPage or
-InsertPage, passing a window to be used as the page. Do not explicitly
-delete the window for a page that is currently managed by wx.Notebook.
-"""
 
+# print results
+for result in search_response['results']:
+   part = result['item']
 
-if __name__ == '__main__':
-    import sys,os
-    import run
-    run.main(['', os.path.basename(sys.argv[0])] + sys.argv[1:])
-
+   # print matched part
+   print "%s - %s" % (part['brand']['name'], part['mpn'])

@@ -3,6 +3,7 @@ import json
 import urllib
 from collections import OrderedDict
 import wx
+from filter_dlg import FilterDialog
 
 class octopart_lookup(object):
 
@@ -78,16 +79,60 @@ class octopart_lookup(object):
             ('q', '{}'.format(pn)),
             ('start', 0),
             ('limit', 100),
-            ('pretty_print','true'),
+            #('pretty_print','true'),
             ('include[]','descriptions'),
             ('include[]','datasheets'),
+            ('spec_drilldown[include]', 'true'),
             ('include[]','specs'),
             ]
         search_url = self._url + self._api_key + '&' + urllib.urlencode(self._args)
         data = urllib.urlopen(search_url).read()
         search_response = json.loads(data)
 
-        self._hits = search_response['hits']
+        num_results = self._hits = search_response['hits']
+
+        num_results_threshold = num_results / 100
+
+        facets = []
+        stats = []
+
+        metadata = search_response['spec_metadata']
+
+        for facet_result_field in search_response['facet_results']['fields'].iteritems():
+            if len(facet_result_field[1]['facets']) > 1:
+                count = 0
+                for f in facet_result_field[1]['facets']:
+                    count += f['count']
+                if count < num_results_threshold:
+                    continue
+                fn = facet_result_field[0].split(".")[1]
+                if metadata[fn]['unit'] != None:
+                    facet_result_field[1]['units_name'] = metadata[fn]['unit']['name']
+                    facet_result_field[1]['units_symbol'] = metadata[fn]['unit']['symbol']
+                else:
+                    facet_result_field[1]['units_name'] = ''
+                    facet_result_field[1]['units_symbol'] = ''
+                facet_result_field[1]['facet_name'] = metadata[fn]['name']
+                facet_result_field[1]['datatype'] = metadata[fn]['datatype']
+                facets.append(facet_result_field)
+
+        for stat_result in search_response['stats_results'].iteritems():
+            if stat_result[1]['count'] > num_results_threshold:
+
+                fn = stat_result[0].split(".")[1]
+                if metadata[fn]['unit'] != None:
+                    stat_result[1]['units_name'] = metadata[fn]['unit']['name']
+                    stat_result[1]['units_symbol'] = metadata[fn]['unit']['symbol']
+                else:
+                    stat_result[1]['units_name'] = ''
+                    stat_result[1]['units_symbol'] = ''
+                stat_result[1]['stat_name'] = metadata[fn]['name']
+                stat_result[1]['datatype'] = metadata[fn]['datatype']
+                stats.append(stat_result)
+
+        self._fd = FilterDialog(None, -1, num_results, facets, stats)
+        self._fd.ShowModal()
+
         found=[]
         if self._hits < 1:
             return found
@@ -96,13 +141,12 @@ class octopart_lookup(object):
         item={}
         for result in search_response['results']:
             part = result['item']
+            specs = part['specs']
+            #print specs.keys()
+
+
             for ds in part['datasheets']:
                 att = ds['attribution']
-                '''
-                for src in att['sources']:
-                    if not ds['metadata'] == None:
-                        print "%s\t%s\t%s\t%s" % (ds['metadata']['last_updated'], ds['metadata']['date_created'], src['name'], ds['url'])
-                        '''
             for offer in part['offers']:
 
                 # Find the description that originated from the seller

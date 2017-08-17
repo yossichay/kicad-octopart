@@ -22,7 +22,7 @@ class SpreadSheet(wx.Frame):
         self.selected_part = {}
         self._up = []
 
-        self._pref_vendors = ['Digi-Key', 'Mouser', 'Arrow', 'Avnet', 'Newark']
+        self._pref_vendors = ['Digi-Key', 'Mouser'] #, 'Arrow', 'Avnet', 'Newark']
         vendors = self.GetVendorList(up)
         _pref_vend_ind=[]
         for v in self._pref_vendors:
@@ -33,20 +33,21 @@ class SpreadSheet(wx.Frame):
                                    "wx.MultiChoiceDialog", vendors)
 
         dlg.SetSelections(_pref_vend_ind)
-        if (dlg.ShowModal() == wx.ID_OK):
-            selections = dlg.GetSelections()
-            self._selected_vendors = [vendors[x] for x in selections]
+        dlg.ShowModal()
+        selections = dlg.GetSelections()
+        self._selected_vendors = [vendors[x] for x in selections]
             #self.log.write("Selections: %s -> %s\n" % (selections, strings))
 
         dlg.Destroy()
-
+        if len(self._selected_vendors) == 0:
+            return
         for p in up:
             if p['Supplier'] in self._selected_vendors:
                 self._up.append(p)
 
 
         manufacturers = self.GetManufacturerList(self._up)
-
+        '''
         toolbar = self.CreateToolBar(TBFLAGS)
         self.CreateStatusBar()
 
@@ -58,19 +59,23 @@ class SpreadSheet(wx.Frame):
         toolbar.AddControl(mfgs)
 
         toolbar.Realize()
-
+        '''
         self._sheet = wx.lib.sheet.CSheet(self)
-        self._def_cell_font = self._sheet.GetDefaultCellFont().Smaller().Smaller().Smaller()
+        #self._def_cell_font = self._sheet.GetDefaultCellFont().Smaller().Smaller().Smaller()
+        #self._def_cell_font = self._sheet.GetDefaultCellFont()
+        self._font_cell = wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        self._font_label = wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         self._sheet.row = self._sheet.col = 0
-        self._sheet.SetDefaultCellFont(self._def_cell_font)
-        self._sheet.SetNumberRows(55)
-        self._sheet.SetNumberCols(25)
+        self._sheet.SetDefaultCellFont(self._font_cell)
+        self._sheet.SetLabelFont(self._font_label)
+        self._sheet.SetNumberRows(len(self._up))
+        self._sheet.SetNumberCols(len(self._fields))
         self._sheet.EnableEditing(False)
         self._sheet.EnableCellEditControl(False)
-        self._sheet.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
+        #self._sheet.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
 
-        for i in range(55):
-            self._sheet.SetRowSize(i, 20)
+        #for i in range(55):
+        #    self._sheet.SetRowSize(i, 20)
 
         i = 0
         for label in self._fields:
@@ -79,10 +84,20 @@ class SpreadSheet(wx.Frame):
         self.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
         self.Bind(gridlib.EVT_GRID_CELL_LEFT_DCLICK, self.OnGridSelectRow)
         self.Bind(gridlib.EVT_GRID_CELL_LEFT_CLICK, self.OnGridCellLeftClick)
-
+        #self._sheet.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(gridlib.EVT_GRID_COL_SIZE, self.OnSize)
+        self.Bind(gridlib.EVT_GRID_ROW_SIZE, self.OnSize)
 
         self.populate()
         self._sheet.AutoSize()
+        self.Fit()
+
+    def OnSize(self, evt):
+        #width, height = self.GetClientSizeTuple()
+        #for col in range(len(self._fields)):
+            #self._sheet.SetColMinimalWidth()
+        self._sheet.AutoSize()
+
 
     def GetVendorList(self, up):
         vendors = []
@@ -145,8 +160,8 @@ class SpreadSheet(wx.Frame):
                 self._sheet.SetCellFont(k, mpn_column, hyperlink_font)
                 self._sheet.SetCellTextColour(k, mpn_column, hl_color)
 
-            self._sheet.AppendRows(1)
+            #self._sheet.AppendRows(1)
             k = k + 1
 
-        self._sheet.AutoSizeColumns()
+        #self._sheet.AutoSizeColumns()
 

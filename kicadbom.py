@@ -199,6 +199,15 @@ class ComponentTypeView(wx.Panel):
         map(self.fp_list.Append,
             [x for x in sorted(set(type_data.keys()))])
 
+    def part_category(self, refs):
+        references = refs.split(";")
+        types = []
+        for r in references:
+            types.append(r[0])
+        types = list(set(types))
+        return types[0]
+
+
     def on_lookup_component(self, event):
         ct = self._current_type
 
@@ -208,8 +217,15 @@ class ComponentTypeView(wx.Panel):
         if not ct.has_valid_key_fields:
             raise Exception("Missing key fields (value / footprint)!")
 
+        category = self.part_category(ct.refs)
+
         ol = octo.octopart_lookup()
         pn = ct.value
+
+        te = wx.TextEntryDialog(self, 'Update search string', caption='Search part',
+                                defaultValue=pn)
+        rs = te.ShowModal()
+        pn = te.Value
 
         while True:
             up = ol.parts_search(pn)
@@ -450,16 +466,19 @@ class MainFrame(wx.Frame):
         # TODO: re-work this to return values instead of passing them byref
         kch.walk_sheets(base_dir, self.schematics[top_name].sheets, self.schematics)
 
+        #cmp_labels = []
+
         for name, schematic in self.schematics.items():
             for _cbase in schematic.components:
                 c = kch.ComponentWrapper(_cbase)
-
+                #if _cbase.labels['name'] not in cmp_labels:
+                    #cmp_labels.append(_cbase.labels['name'])
                 # Skip virtual components (power, gnd, etc)
                 if c.is_virtual:
                     continue
 
-                # Skip anything that is missing either a value or a
-                # footprint
+                # Skip anything that is missing either a value or a footprint
+
                 if not c.has_valid_key_fields:
                     continue
 
