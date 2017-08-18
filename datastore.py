@@ -74,6 +74,13 @@ class SupplierPart(Base):
     manufacturer_part_id = Column(Integer, ForeignKey('manufacturer_part.id'))
     manufacturer_part = relationship('ManufacturerPart')
 
+class Description(Base):
+    __tablename__ = 'description'
+    id = Column(Integer, primary_key=True)
+    desc = Column(String(64), nullable=True)
+    manufacturer_part_id = Column(Integer, ForeignKey('manufacturer_part.id'))
+    manufacturer_part = relationship('ManufacturerPart')
+
 
 class Datastore(object):
     def __init__(self, datastore_path):
@@ -161,6 +168,11 @@ class Datastore(object):
             .filter(SupplierPart.pn == ct.supplier_pn)
         ).first()
 
+        de = (
+            session.query(Description)
+            .filter(Description.desc == ct.description)
+        ).first()
+
         if not val and len(ct.value.strip()):
             val = ComponentValue(value=ct.value)
             session.add(val)
@@ -189,7 +201,11 @@ class Datastore(object):
             spn = SupplierPart(pn=ct.supplier_pn, url=ct.supplier_url)
             session.add(spn)
 
+        if not de and len(ct.datasheet.strip()):
+            de = Description(desc=ct.description)
+            session.add(de)
         # draw up associations
+
         if spr and spn and not spn.supplier:
             spn.supplier = spr
 

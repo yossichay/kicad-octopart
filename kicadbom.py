@@ -46,8 +46,10 @@ class ComponentTypeView(wx.Panel):
         self._current_type = None
         self.grid = wx.GridSizer(0, 2, 3, 3)
 
-        self.lookup_button = wx.Button(self, 311, 'Part Lookup')
-        self.save_button = wx.Button(self, 312, 'Save Part to Datastore')
+        self.octopart_lookup_button = wx.Button(self, 311, 'Octopart Lookup')
+        self.save_button = wx.Button(self, 312, 'Save Part to Local DB')
+        self.localDB_lookup_button = wx.Button(self, 313, 'Local DB Lookup')
+        self.save_all_button = wx.Button(self, 314, 'Save All Parts to local DB')
 
         self.qty_text = wx.TextCtrl(self, 301, '', style=wx.TE_READONLY)
         self.refs_text = wx.TextCtrl(self, 302, '', style=wx.TE_READONLY)
@@ -62,7 +64,9 @@ class ComponentTypeView(wx.Panel):
 
         # Bind the save and lookup component buttons
         self.save_button.Bind(wx.EVT_BUTTON, self.on_save_to_datastore, id=wx.ID_ANY)
-        self.lookup_button.Bind(wx.EVT_BUTTON, self.on_lookup_component, id=wx.ID_ANY)
+        self.octopart_lookup_button.Bind(wx.EVT_BUTTON, self.on_octopart_lookup_component, id=wx.ID_ANY)
+        self.save_all_button.Bind(wx.EVT_BUTTON, self.on_save_all_to_datastore, id=wx.ID_ANY)
+        self.localDB_lookup_button.Bind(wx.EVT_BUTTON, self.on_localDB_lookup_component, id=wx.ID_ANY)
 
         # Set the background color of the read only controls to
         # slightly darker to differentiate them
@@ -129,8 +133,10 @@ class ComponentTypeView(wx.Panel):
             (self.spr_text, 0, wx.EXPAND),
             (wx.StaticText(self, -1, 'Supplier PN'), 0, wx.EXPAND),
             (self.spn_text, 0, wx.EXPAND),
-            (self.lookup_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.localDB_lookup_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
             (self.save_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.octopart_lookup_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.save_all_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
         ])
 
     def save_component_type_changes(self):
@@ -145,6 +151,9 @@ class ComponentTypeView(wx.Panel):
         self._current_type.manufacturer_pn = self.mpn_text.GetValue()
         self._current_type.supplier = self.spr_text.GetValue()
         self._current_type.supplier_pn = self.spn_text.GetValue()
+
+    def on_save_all_to_datastore(self, event):
+        return
 
     def on_save_to_datastore(self, event):
 
@@ -207,8 +216,84 @@ class ComponentTypeView(wx.Panel):
         types = list(set(types))
         return types[0]
 
+    def on_localDB_lookup_component(self, event):
+        ct = self._current_type
 
-    def on_lookup_component(self, event):
+        if not ct:
+            return
+
+        if not ct.has_valid_key_fields:
+            raise Exception("Missing key fields (value / footprint)!")
+
+        up = self.parent.ds.lookup(ct)
+
+        if up is None:
+            dlg = wx.MessageDialog(self.parent,
+                                   "Component does not exist in Datastore",
+                                   "No Results Found",
+                                   wx.OK | wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if not up.manufacturer_pns.count():
+            dlg = wx.MessageDialog(parent,
+                                   "No suitable parts found in Datastore",
+                                   "No Results Found",
+                                   wx.OK | wx.ICON_INFORMATION)
+            return
+
+        selections = {}
+
+
+        for pn in up.manufacturer_pns:
+            print pn
+            if not pn.supplier_parts:
+                print "no known suppliers"
+                sel_txt = '{} (No Known Suppliers)'.format(
+                    pn.pn
+                )
+                selections[sel_txt] = (pn, None)
+
+            else:
+                for s_pn in pn.supplier_parts:
+                    print "suppliers:", s_pn.supplier.name
+                    sel_text = '{} {} @ {}[{}]'.format(
+                        pn.manufacturer.name,
+                        pn.pn,
+                        s_pn.supplier.name,
+                        s_pn.pn
+                    )
+                    selections[sel_text] = (pn, s_pn)
+
+        def _set_pn_values(mpn,spn):
+            if mpn:
+                self.mfr_text.SetValue(mpn.manufacturer.name)
+                self.mpn_text.SetValue(mpn.pn)
+            if spn:
+                self.spr_text.SetValue(spn.supplier.name)
+                self.spn_text.SetValue(spn.pn)
+
+
+        if len(selections) == 1:
+            mpn, spn = selections.values().pop()
+            _set_pn_values(mpn,spn)
+        else:
+            _dbps = DBPartSelectorDialog(self,
+                                         wx.ID_ANY,
+                                         'DB Part Selection')
+            _dbps.attach_data(selections.keys())
+            _dbps.ShowModal()
+
+            if not _dbps.selection_text:
+                return
+
+            mpn, spn = selections[_dbps.selection_text]
+            _set_pn_values(mpn,spn)
+
+
+
+    def on_octopart_lookup_component(self, event):
         ct = self._current_type
 
         if not ct:
@@ -501,7 +586,7 @@ class MainFrame(wx.Frame):
 
         self.ctv.attach_data(self.component_type_map)
         self._current_type = None
-        self.ctv.lookup_button.disabled = True
+        self.ctv.localDB_lookup_button.disabled = True
         self.ctv.save_button.disabled = True
 
     def on_consolidate(self, event):
