@@ -78,7 +78,7 @@ class octopart_lookup(object):
         self._args = [
             ('q', '{}'.format(pn)),
             ('start', 0),
-            ('limit', 100),
+            ('limit', 10),
             #('pretty_print','true'),
             ('include[]','descriptions'),
             ('include[]','datasheets'),

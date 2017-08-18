@@ -86,7 +86,7 @@ class SpreadSheet(wx.Frame):
 
         self.Bind(gridlib.EVT_GRID_LABEL_LEFT_DCLICK, self.OnGridColSort)
         self.Bind(gridlib.EVT_GRID_CELL_LEFT_DCLICK, self.OnGridSelectRow)
-        self.Bind(gridlib.EVT_GRID_CELL_LEFT_CLICK, self.OnGridCellLeftClick)
+        self.Bind(gridlib.EVT_GRID_CELL_LEFT_DCLICK, self.OnGridCellLeftClick)
         #self._sheet.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(gridlib.EVT_GRID_COL_SIZE, self.OnSize)
         self.Bind(gridlib.EVT_GRID_ROW_SIZE, self.OnSize)
@@ -139,7 +139,7 @@ class SpreadSheet(wx.Frame):
             return
         else:
             if (self._up[_row]['Datasheet'] != ''):
-                webbrowser.open(self._up[_row]['Datasheet'])
+                webbrowser.get('google-chrome').open_new_tab(self._up[_row]['Datasheet'])
 
 
     def populate(self):
