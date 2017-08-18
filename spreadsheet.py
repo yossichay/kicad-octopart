@@ -1,6 +1,6 @@
 import wx
 import wx.grid as gridlib
-from wx.lib import sheet
+import ssheet
 from operator import itemgetter
 import webbrowser
 
@@ -60,7 +60,8 @@ class SpreadSheet(wx.Frame):
 
         toolbar.Realize()
         '''
-        self._sheet = wx.lib.sheet.CSheet(self)
+        #self._sheet = wx.lib.sheet.CSheet(self)
+        self._sheet = ssheet.CSheet(self)
         #self._def_cell_font = self._sheet.GetDefaultCellFont().Smaller().Smaller().Smaller()
         #self._def_cell_font = self._sheet.GetDefaultCellFont()
         self._font_cell = wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
@@ -81,7 +82,9 @@ class SpreadSheet(wx.Frame):
         for label in self._fields:
             self._sheet.SetColLabelValue(i, label)
             i += 1
-        self.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
+        #self.Bind(gridlib.EVT_GRID_COL_SORT, self.OnGridColSort)
+
+        self.Bind(gridlib.EVT_GRID_LABEL_LEFT_DCLICK, self.OnGridColSort)
         self.Bind(gridlib.EVT_GRID_CELL_LEFT_DCLICK, self.OnGridSelectRow)
         self.Bind(gridlib.EVT_GRID_CELL_LEFT_CLICK, self.OnGridCellLeftClick)
         #self._sheet.Bind(wx.EVT_SIZE, self.OnSize)
@@ -145,8 +148,8 @@ class SpreadSheet(wx.Frame):
         mpn_column = self._fields.index("Manufacturer PN")
         default_font = self._sheet.GetCellFont(0,0)
         hyperlink_font = default_font
-        hyperlink_font.MakeItalic()
-        hyperlink_font.MakeUnderlined()
+        hyperlink_font.Style = wx.FONTSTYLE_ITALIC
+        hyperlink_font.Underlined = True
         hl_color = wx.Colour(0,0,255)
 
         for part in self._up:

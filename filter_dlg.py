@@ -59,6 +59,7 @@ class FilterDialog(wx.Dialog):
         vbox.Add(stats_grid, 1, wx.EXPAND | wx.ALL, 3)
         #facets_box.Fit(self)
         self.SetSizer(vbox)
+        #stats_grid.Fit(self)
         #vbox.Fit(self)
         #self.DoLayoutAdaptation()
 

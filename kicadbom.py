@@ -44,7 +44,7 @@ class ComponentTypeView(wx.Panel):
         self.parent = parent
         self.selected_part = {}
         self._current_type = None
-        self.grid = wx.GridSizer(0, 2, 3, 3)
+        self.grid = wx.GridSizer(0, 2, 1, 3)
 
         self.octopart_lookup_button = wx.Button(self, 311, 'Octopart Lookup')
         self.save_button = wx.Button(self, 312, 'Save Part to Local DB')
@@ -103,10 +103,11 @@ class ComponentTypeView(wx.Panel):
         selbox.Add(compbox, 1, wx.EXPAND)
 
         # Perform final layout
-        vbox.Add(self.grid, 1, wx.EXPAND | wx.ALL, 3)
+        vbox.Add(self.grid, 3, wx.EXPAND | wx.ALL, 3)
         vbox.Add(selbox, 3, wx.EXPAND | wx.ALL, 3)
 
         self.SetSizer(vbox)
+        self.Fit()
 
     def _populate_grid(self):
         # Create text objects to be stored in grid
@@ -133,10 +134,10 @@ class ComponentTypeView(wx.Panel):
             (self.spr_text, 0, wx.EXPAND),
             (wx.StaticText(self, -1, 'Supplier PN'), 0, wx.EXPAND),
             (self.spn_text, 0, wx.EXPAND),
-            (self.localDB_lookup_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
-            (self.save_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
-            (self.octopart_lookup_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
-            (self.save_all_button, 0, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.localDB_lookup_button, 1, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.save_button, 1, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.octopart_lookup_button, 1, wx.ALIGN_CENTER_HORIZONTAL),
+            (self.save_all_button, 1, wx.ALIGN_CENTER_HORIZONTAL),
         ])
 
     def save_component_type_changes(self):
@@ -307,8 +308,7 @@ class ComponentTypeView(wx.Panel):
         ol = octo.octopart_lookup()
         pn = ct.value
 
-        te = wx.TextEntryDialog(self, 'Update search string', caption='Search part',
-                                defaultValue=pn)
+        te = wx.TextEntryDialog(self, 'Update search string', caption='Search part', value=pn)
         rs = te.ShowModal()
         pn = te.Value
 
@@ -316,7 +316,7 @@ class ComponentTypeView(wx.Panel):
             up = ol.parts_search(pn)
             hits = ol.get_hits()
             if hits < 1:
-                te = wx.TextEntryDialog(self, 'Component does not exist in Octopart', caption='Component not found', defaultValue=ct.value)
+                te = wx.TextEntryDialog(self, 'Component does not exist in Octopart', caption='Component not found', value=ct.value)
                 rs = te.ShowModal()
                 if rs == wx.ID_CANCEL:
                     return
@@ -437,7 +437,7 @@ class MainFrame(wx.Frame):
         file.AppendSeparator()
 
         quit = wx.MenuItem(file, 105, '&Quit\tCtrl+Q', 'Quit the Application')
-        file.AppendItem(quit)
+        file.Append(quit)
         edit.Append(201, 'Consolidate Components', 'Consolidate duplicated components')
         #edit.Append(202, '&Lookup Preferences', 'Lookup Preferences')
         menubar.Append(file, '&File')
