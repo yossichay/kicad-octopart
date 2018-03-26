@@ -200,7 +200,8 @@ class Datastore(object):
             session.add(spr)
 
         if not spn and len(ct.supplier_pn.strip()):
-            spn = SupplierPart(pn=ct.supplier_pn, url=ct.supplier_url)
+            spn = SupplierPart(pn=ct.supplier_pn)
+#            spn = SupplierPart(pn=ct.supplier_pn, url=ct.supplier_url)
             session.add(spn)
 
         '''

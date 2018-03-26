@@ -139,35 +139,43 @@ class ComponentWrapper(object):
 
     @property
     def manufacturer(self):
-        return self._get_field_value('MFR')
+        return self._get_field_value('Manufacturer')
+#        return self._get_field_value('MFR')
 
     @manufacturer.setter
     def manufacturer(self, mfr):
-        self._set_field_value('MFR', mfr)
+        self._set_field_value('Manufacturer', mfr)
+#        self._set_field_value('MFR', mfr)
 
     @property
     def supplier(self):
-        return self._get_field_value('SPR')
+        return self._get_field_value('Supplier')
+#        return self._get_field_value('SPR')
 
     @supplier.setter
     def supplier(self, sup):
-        self._set_field_value('SPR', sup)
+        self._set_field_value('Supplier', sup)
+#        self._set_field_value('SPR', sup)
 
     @property
     def manufacturer_pn(self):
-        return self._get_field_value('MPN')
+        return self._get_field_value('Manufacturer PN')
+#        return self._get_field_value('MPN')
 
     @manufacturer_pn.setter
     def manufacturer_pn(self, pn):
-        self._set_field_value('MPN', pn)
+        self._set_field_value('Manufacturer PN', pn)
+#        self._set_field_value('MPN', pn)
 
     @property
     def supplier_pn(self):
-        return self._get_field_value('SPN')
+        return self._get_field_value('Supplier PN')
+#        return self._get_field_value('SPN')
 
     @supplier_pn.setter
     def supplier_pn(self, pn):
-        self._set_field_value('SPN', pn)
+        self._set_field_value('Supplier PN', pn)
+#        self._set_field_value('SPN, pn)
 
     @property
     def description(self):

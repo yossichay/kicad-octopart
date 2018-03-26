@@ -50,6 +50,7 @@ class ComponentTypeView(wx.Panel):
         self.save_button = wx.Button(self, 312, 'Save Part to Local DB')
         self.localDB_lookup_button = wx.Button(self, 313, 'Local DB Lookup')
         self.save_all_button = wx.Button(self, 314, 'Save All Parts to local DB')
+        self.save_all_button.Disable()
 
         self.qty_text = wx.TextCtrl(self, 301, '', style=wx.TE_READONLY)
         self.refs_text = wx.TextCtrl(self, 302, '', style=wx.TE_READONLY)

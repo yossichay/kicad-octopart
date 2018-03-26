@@ -77,13 +77,14 @@ class octopart_lookup(object):
 
         self._args = [
             ('q', '{}'.format(pn)),
-            ('start', 0),
-            ('limit', 10),
+            #('start', 0),
+            ('limit', 100),
             #('pretty_print','true'),
             ('include[]','descriptions'),
             ('include[]','datasheets'),
             ('spec_drilldown[include]', 'true'),
             ('include[]','specs'),
+            #('include[]','spec_drilldown'),
             ]
         search_url = self._url + self._api_key + '&' + urllib.urlencode(self._args)
         data = urllib.urlopen(search_url).read()
@@ -92,7 +93,7 @@ class octopart_lookup(object):
         num_results = self._hits = search_response['hits']
 
         num_results_threshold = num_results / 100
-
+        '''
         facets = []
         stats = []
 
@@ -103,6 +104,7 @@ class octopart_lookup(object):
                 count = 0
                 for f in facet_result_field[1]['facets']:
                     count += f['count']
+                # Don't use items with qty < 1% of all results
                 if count < num_results_threshold:
                     continue
                 fn = facet_result_field[0].split(".")[1]
@@ -132,36 +134,50 @@ class octopart_lookup(object):
 
         self._fd = FilterDialog(None, -1, num_results, facets, stats)
         self._fd.ShowModal()
-
+        '''
         found=[]
         if self._hits < 1:
             return found
 
 
         item={}
+        num_results = 0
         for result in search_response['results']:
             part = result['item']
-            specs = part['specs']
-            #print specs.keys()
 
+            # specs = part['specs']
+            # print specs.keys()
 
-            for ds in part['datasheets']:
-                att = ds['attribution']
+            d = result['snippet']
+            # for ds in part['datasheets']:
+                # att = ds['attribution']
+
             for offer in part['offers']:
-
+                '''
                 # Find the description that originated from the seller
+                d = ''
                 for description in part['descriptions']:
-                    vendor_desc = description['attribution']['sources']
-                    vendor = vendor_desc[0]['name']
-                    d=''
+                    #vendor_desc = description['attribution']['sources']
+                    #vendor = vendor_desc[0]                                                                                                                                                                    ['name']
+                    vendor = description['attribution']['sources'][0]['name']
                     if (vendor==offer['seller']['name']):
                         d=description['value']
                         d=d[:75]
                         break
-
-                # Find the datasheet that originated from the seller
+            '''
+            # Find the datasheet that originated from the seller
                 dsht = ''
+                mfg = part['brand']['name']
+
                 for datasheet in part['datasheets']:
+                    try:
+                        src = datasheet['attribution']['sources'][0]['name']
+                    except:
+                        continue
+                    if (mfg==src):
+                        dsht = datasheet['url']
+                        break
+                    '''
                     vendor_desc = datasheet['attribution']['sources']
                     try:
                         vendor = vendor_desc[0]['name']
@@ -170,6 +186,7 @@ class octopart_lookup(object):
                     if (vendor==offer['seller']['name']):
                         dsht=datasheet['url']
                         break
+                    '''
                 prices_dict = self.format_prices(offer['prices'])
                 fn = OrderedDict()
                 fn[self._field_map[0]] = part['brand']['name']
@@ -184,5 +201,6 @@ class octopart_lookup(object):
                 fn[self._field_map[7]] = dsht
 
                 found.append(fn)
+                num_results = num_results + 1
 
         return found
