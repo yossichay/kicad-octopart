@@ -19,6 +19,36 @@ class octopart_lookup(object):
         'Datasheet'
         ]
 
+    _filter_map = [
+        'specs.packaging.value',
+        'specs.contact_style.value',
+        'specs.lifecycle_status.value',
+        'specs.mounting_style.value',
+        'specs.capacitance_tolerance.value',
+        'specs.output_capacitor_type.value',
+        'specs.part_family.value',
+        'specs.inductance_tolerance.value',
+        'specs.termination_style.value',
+        'specs.color.value',
+        'specs.contact_plating.value',
+        'specs.china_rohs.value',
+        'specs.conductor_material.value',
+        'specs.resistance_tolerance.value',
+        'specs.shielding.value',
+        'specs.material.value',
+        'specs.gender.value',
+        'specs.rohs_status.value',
+        'specs.contacts_type.value',
+        'specs.logic_type.value',
+        'specs.lead_free_status.value',
+        'specs.contact_material.value',
+        'specs.case_package.value',
+        'specs.housing_material.value',
+        'specs.oscillator_type.value',
+        'specs.output_type.value',
+        'specs.dielectric_material.value'
+    ]
+
     def __init__(self):
         self._api_key = "?apikey=70358d97"
         self._url = "http://octopart.com/api/v3/parts/search"
@@ -157,7 +187,7 @@ class octopart_lookup(object):
             ('spec_drilldown[include]', 'true'),
             #('spec_drilldown[limit]', 2),
             ('include[]','specs'),
-            #('filter[fields][category_uids][]', cat_uid)
+            ('filter[fields][category_uids][]', cat_uid)
             #('include[]','spec_drilldown'),
             ]
         search_url = self._url + self._api_key + '&' + urllib.urlencode(self._args)
@@ -166,8 +196,8 @@ class octopart_lookup(object):
 
         num_results = self._hits = search_response['hits']
 
-        num_results_threshold = 1
-        #num_results_threshold = num_results / 100
+        #num_results_threshold = 1
+        num_results_threshold = num_results / 100 + 1
 
         facets = []
         stats = []
@@ -180,22 +210,28 @@ class octopart_lookup(object):
         dr = {}
         #for f in search_response['facet_results']['fields'].iteritems():
 
-
+        #F = open("facets.txt", "w")
 
         for facet_result_field in search_response['facet_results']['fields'].iteritems():
             # if len(facet_result_field[1]['facets']) > 1:
-            if True:
+            #if True:
+
+            if facet_result_field[0] in self._filter_map:
+
                 count = 0
                 for f in facet_result_field[1]['facets']:
                     count += f['count']
                 # Don't use items with qty < 1% of all results
-                #if count < num_results_threshold:
-                #    continue
+                if count < num_results_threshold:
+                    continue
                 fn = facet_result_field[0].split(".")[1]
+
                 #dr['name'] = fn
                 #dr['rank'] = facet_result_field[1]['spec_drilldown_rank']
                 #dr['count'] = count
-                drilldown.append({'name':fn, 'rank':facet_result_field[1]['spec_drilldown_rank'], 'count':count})
+                #drilldown.append({'name':fn, 'rank':facet_result_field[1]['spec_drilldown_rank'], 'count':count})
+                #F.write(fn)
+                #print("'%s'," % facet_result_field[0])
                 if metadata[fn]['unit'] != None:
                     facet_result_field[1]['units_name'] = metadata[fn]['unit']['name']
                     facet_result_field[1]['units_symbol'] = metadata[fn]['unit']['symbol']
@@ -205,6 +241,7 @@ class octopart_lookup(object):
                 facet_result_field[1]['facet_name'] = metadata[fn]['name']
                 facet_result_field[1]['datatype'] = metadata[fn]['datatype']
                 facets.append(facet_result_field)
+        #F.close()
 
         for stat_result in search_response['stats_results'].iteritems():
             if stat_result[1]['count'] > num_results_threshold:
@@ -222,6 +259,9 @@ class octopart_lookup(object):
 
         self._fd = FilterDialog(None, -1, num_results, facets, stats)
         self._fd.ShowModal()
+
+
+
 
         found=[]
         if self._hits < 1:
