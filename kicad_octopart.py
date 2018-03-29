@@ -73,17 +73,19 @@ class octopart_lookup(object):
                 qty = price_break[0]
         return pr
 
-    def parts_search(self, pn):
+
+    def find_categories(self, pn):
 
         self._args = [
             ('q', '{}'.format(pn)),
             #('start', 0),
-            ('limit', 100),
+            #('limit', 100),
             #('pretty_print','true'),
-            ('include[]','descriptions'),
-            ('include[]','datasheets'),
-            ('spec_drilldown[include]', 'true'),
-            ('include[]','specs'),
+            #('include[]','descriptions'),
+            #('include[]','datasheets'),
+            ('include[]', 'category_uids'),
+            #('spec_drilldown[include]', 'true'),
+            #('include[]','specs'),
             #('include[]','spec_drilldown'),
             ]
         search_url = self._url + self._api_key + '&' + urllib.urlencode(self._args)
@@ -93,21 +95,107 @@ class octopart_lookup(object):
         num_results = self._hits = search_response['hits']
 
         num_results_threshold = num_results / 100
-        '''
+
         facets = []
         stats = []
 
         metadata = search_response['spec_metadata']
 
+
+        # Find the possible categories for the part
+
+        cat_uids = []
+        args = []
+        for result in search_response['results']:
+            for cat_uid in result['item']['category_uids']:
+                if cat_uid not in cat_uids:
+                    cat_uids.append(cat_uid)
+                    args.append(('uid[]', cat_uid))
+
+        url = 'http://octopart.com/api/v3/categories/get_multi'
+        url += self._api_key
+        url += "&" + urllib.urlencode(args)
+
+        data = urllib.urlopen(url).read()
+        server_response = json.loads(data)
+
+        categories = []
+        category_names = []
+        index = 0
+        for cat in server_response.iteritems():
+            if len(cat[1]['children_uids']) == 0:
+                #c['uid'] = cat[0]
+                #c['name'] = cat[1]['name']
+                categories.append({'name':cat[1]['name'], 'uid': cat[0]})
+                category_names.append(cat[1]['name'])
+
+
+        dlg = wx.SingleChoiceDialog(None, "Select Category", "wx.MultiChoiceDialog", category_names)
+
+
+        dlg.ShowModal()
+        cat_name = dlg.GetStringSelection()
+        for c in categories:
+            if c['name'] == cat_name:
+                cat_uids = c['uid']
+                break
+
+        return cat_uid
+
+
+    def parts_search(self, pn, cat_uid):
+    #def parts_search(self, pn):
+
+        self._args = [
+            ('q', '{}'.format(pn)),
+            #('start', 0),
+            ('limit', 100),
+            ('pretty_print','true'),
+            ('include[]','descriptions'),
+            ('include[]','datasheets'),
+            ('include[]', 'category_uids'),
+            ('spec_drilldown[include]', 'true'),
+            #('spec_drilldown[limit]', 2),
+            ('include[]','specs'),
+            #('filter[fields][category_uids][]', cat_uid)
+            #('include[]','spec_drilldown'),
+            ]
+        search_url = self._url + self._api_key + '&' + urllib.urlencode(self._args)
+        data = urllib.urlopen(search_url).read()
+        search_response = json.loads(data)
+
+        num_results = self._hits = search_response['hits']
+
+        num_results_threshold = 1
+        #num_results_threshold = num_results / 100
+
+        facets = []
+        stats = []
+
+        metadata = search_response['spec_metadata']
+
+        # Check drilldown Rank
+
+        drilldown = []
+        dr = {}
+        #for f in search_response['facet_results']['fields'].iteritems():
+
+
+
         for facet_result_field in search_response['facet_results']['fields'].iteritems():
-            if len(facet_result_field[1]['facets']) > 1:
+            # if len(facet_result_field[1]['facets']) > 1:
+            if True:
                 count = 0
                 for f in facet_result_field[1]['facets']:
                     count += f['count']
                 # Don't use items with qty < 1% of all results
-                if count < num_results_threshold:
-                    continue
+                #if count < num_results_threshold:
+                #    continue
                 fn = facet_result_field[0].split(".")[1]
+                #dr['name'] = fn
+                #dr['rank'] = facet_result_field[1]['spec_drilldown_rank']
+                #dr['count'] = count
+                drilldown.append({'name':fn, 'rank':facet_result_field[1]['spec_drilldown_rank'], 'count':count})
                 if metadata[fn]['unit'] != None:
                     facet_result_field[1]['units_name'] = metadata[fn]['unit']['name']
                     facet_result_field[1]['units_symbol'] = metadata[fn]['unit']['symbol']
@@ -134,7 +222,7 @@ class octopart_lookup(object):
 
         self._fd = FilterDialog(None, -1, num_results, facets, stats)
         self._fd.ShowModal()
-        '''
+
         found=[]
         if self._hits < 1:
             return found

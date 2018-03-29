@@ -38,9 +38,12 @@ class FilterDialog(wx.Dialog):
             fbox[n].Add(fp_list[n], 1, wx.EXPAND)
             facets_box.Add(fbox[n], 1, wx.EXPAND)
             for f in facet[1]['facets']:
-                flist.append(f['value'])
-                fp_list[n].Append(f['value'])
-            #n += 1
+                s = "%s (%d)" % (f['value'], f['count'])
+                flist.append(s)
+                fp_list[n].Append(s)
+                #flist.append(f['value'])
+                #fp_list[n].Append(f['value'])
+        #n += 1
 
         slist = []
         for n in range(0, len(stats)):

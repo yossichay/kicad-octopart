@@ -314,7 +314,10 @@ class ComponentTypeView(wx.Panel):
         pn = te.Value
 
         while True:
-            up = ol.parts_search(pn)
+            cat_uid = ol.find_categories(pn)
+            up = ol.parts_search(pn, cat_uid)
+            #up = ol.parts_search(pn)
+
             hits = ol.get_hits()
             if hits < 1:
                 te = wx.TextEntryDialog(self, 'Component does not exist in Octopart', caption='Component not found', value=ct.value)
